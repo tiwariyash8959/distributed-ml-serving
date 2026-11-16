@@ -4,7 +4,7 @@ An original project exploring reliable, horizontally scalable model serving with
 
 ## Status
 
-Early implementation. The baseline gRPC worker and load-aware coordinator are implemented locally. Manual smoke checks confirmed that a 32-request concurrent burst reached both workers and that prediction and readiness still work when the first configured worker is unavailable. These checks validate behavior, not performance; performance claims will wait for reproducible benchmarks.
+Early implementation. The baseline gRPC worker and load-aware coordinator are implemented. Manual smoke checks confirmed that a 32-request concurrent burst reached both workers and that prediction and readiness still work when the first configured worker is unavailable. These checks validate behavior, not performance; performance claims will wait for reproducible benchmarks.
 
 ## Goals
 

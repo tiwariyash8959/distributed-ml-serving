@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package mlserving.v1;
+
+service PredictionService {
+  rpc Predict(PredictRequest) returns (PredictResponse);
+  rpc GetHealth(HealthRequest) returns (HealthResponse);
+}
+
+message PredictRequest {
+  string request_id = 1;
+  string model_version = 2;
+  repeated float features = 3;
+}
+
+message PredictResponse {
+  string request_id = 1;
+  string model_version = 2;
+  repeated float scores = 3;
+  string predicted_label = 4;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  bool ready = 1;
+  string model_version = 2;
+}

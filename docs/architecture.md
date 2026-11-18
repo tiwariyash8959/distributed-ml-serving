@@ -18,7 +18,7 @@
 
 ## First milestone: implemented locally
 
-The repository now has a single-worker gRPC prediction path with a deterministic baseline model and a coordinator that routes to configured workers. Storage and Kubernetes remain outside this first implementation slice until the service contract and failure behavior are exercised.
+The worker loads a validated, versioned linear model from a JSON artifact. The default artifact ships with the Python package; operators can select another compatible artifact at startup. Artifacts and metadata are not yet stored in object storage or a database. Kubernetes deployment also remains future work.
 
 ## Coordinator behavior
 

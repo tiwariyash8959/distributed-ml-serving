@@ -22,6 +22,10 @@ def main() -> None:
 
     serve_parser = commands.add_parser("serve", help="start the gRPC prediction worker")
     serve_parser.add_argument("--address", default="127.0.0.1:50051")
+    serve_parser.add_argument(
+        "--model-artifact",
+        help="path to a versioned JSON model artifact (defaults to the packaged baseline)",
+    )
 
     coordinator_parser = commands.add_parser(
         "coordinator", help="start a load-aware coordinator in front of workers"
@@ -45,7 +49,7 @@ def main() -> None:
 
     arguments = parser.parse_args()
     if arguments.command == "serve":
-        serve(arguments.address)
+        serve(arguments.address, arguments.model_artifact)
     elif arguments.command == "coordinator":
         serve_coordinator(arguments.workers, arguments.address, arguments.request_timeout)
     elif arguments.command == "predict":

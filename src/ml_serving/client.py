@@ -6,7 +6,6 @@ import uuid
 
 import grpc
 
-from ml_serving.model import MODEL_VERSION
 from ml_serving.v1 import prediction_pb2, prediction_pb2_grpc
 
 
@@ -20,7 +19,6 @@ def predict(
         return stub.Predict(
             prediction_pb2.PredictRequest(
                 request_id=request_id or str(uuid.uuid4()),
-                model_version=MODEL_VERSION,
                 features=features,
             ),
             timeout=3.0,

@@ -55,6 +55,27 @@ ml-serving predict --features 0.8,0.2
 
 The baseline is a deterministic three-class linear model intended to exercise the RPC path. It is not a trained production model. The worker exposes `Predict` and `GetHealth`; invalid input is returned as a gRPC status error.
 
+## Versioned model artifacts
+
+The worker loads a JSON model artifact at startup. The packaged `baseline-0.1` artifact is used by default. To load another compatible artifact, pass its path when starting the worker:
+
+```powershell
+ml-serving serve --model-artifact .\models\candidate.json
+```
+
+An artifact declares its `model_version`, `feature_count`, class `labels`, and a `weights` row for each label. Each row contains one coefficient per feature followed by the bias. The worker validates the file before binding its gRPC port and reports the loaded version in predictions and health responses. For example:
+
+```json
+{
+  "model_version": "example-1.0",
+  "feature_count": 2,
+  "labels": ["class_a", "class_b"],
+  "weights": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
+}
+```
+
+Artifacts are local files in this milestone; object storage and persistent model metadata remain future work.
+
 ## Coordinator
 
 Start two worker processes on separate ports, then start the coordinator in front of them:
@@ -74,11 +95,7 @@ Check readiness with `ml-serving health --address 127.0.0.1:50052`. The coordina
 1. [x] Define the versioned prediction contract and project boundaries.
 2. [x] Implement a baseline model worker and a gRPC prediction path.
 3. [x] Add load-aware coordinator routing, deadlines, worker failover, and request-correlated JSON logs.
-4. Add artifact storage and model metadata persistence.
-5. Containerize services and deploy to a local Kubernetes cluster.
-6. Add observability, load tests, and documented benchmark results.
-
-
-## Attribution
-
-This is an independent implementation inspired by the Cassandra + gRPC ML serving example in [neuraCollab/ml-portfolio](https://github.com/neuraCollab/ml-portfolio). No source files from that repository were copied. Development used AI assistance; design and behavior are being reviewed and verified as the project evolves.
+4. [x] Load validated, versioned model artifacts from local JSON files.
+5. Add object artifact storage and model metadata persistence.
+6. Containerize services and deploy to a local Kubernetes cluster.
+7. Add observability, load tests, and documented benchmark results.

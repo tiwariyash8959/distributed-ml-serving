@@ -1,0 +1,44 @@
+x-worker: &worker
+  build: .
+  image: distributed-ml-serving:local
+  command: ["serve", "--address", "0.0.0.0:50051"]
+  expose:
+    - "50051"
+  healthcheck:
+    test: ["CMD", "ml-serving", "health", "--address", "127.0.0.1:50051"]
+    interval: 10s
+    timeout: 3s
+    retries: 3
+    start_period: 5s
+  restart: unless-stopped
+
+services:
+  worker-a:
+    <<: *worker
+
+  worker-b:
+    <<: *worker
+
+  coordinator:
+    build: .
+    image: distributed-ml-serving:local
+    command:
+      - coordinator
+      - --address
+      - 0.0.0.0:50052
+      - --workers
+      - worker-a:50051,worker-b:50051
+    ports:
+      - "50052:50052"
+    depends_on:
+      worker-a:
+        condition: service_healthy
+      worker-b:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "ml-serving", "health", "--address", "127.0.0.1:50052"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped

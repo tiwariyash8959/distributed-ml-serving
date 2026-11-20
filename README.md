@@ -90,6 +90,20 @@ Point the sample client at the coordinator with `ml-serving predict --address 12
 
 Check readiness with `ml-serving health --address 127.0.0.1:50052`. The coordinator is ready when any configured worker responds ready; it shares the health-check deadline across workers so an unreachable endpoint does not hide a healthy one.
 
+## Local container deployment
+
+Docker Compose builds one application image and runs two workers behind a coordinator. Only the coordinator is published on the host at `127.0.0.1:50052`; Compose waits for both workers to pass their readiness checks before starting the coordinator.
+
+```powershell
+docker compose up --build -d
+docker compose exec coordinator ml-serving health --address 127.0.0.1:50052
+docker compose exec coordinator ml-serving predict --address 127.0.0.1:50052 --features 0.8,0.2
+docker compose logs -f coordinator worker-a worker-b
+docker compose down
+```
+
+This Compose setup is for local development. Kubernetes deployment, external artifact storage, and persistent model metadata are still planned.
+
 ## Roadmap
 
 1. [x] Define the versioned prediction contract and project boundaries.
@@ -97,5 +111,6 @@ Check readiness with `ml-serving health --address 127.0.0.1:50052`. The coordina
 3. [x] Add load-aware coordinator routing, deadlines, worker failover, and request-correlated JSON logs.
 4. [x] Load validated, versioned model artifacts from local JSON files.
 5. Add object artifact storage and model metadata persistence.
-6. Containerize services and deploy to a local Kubernetes cluster.
-7. Add observability, load tests, and documented benchmark results.
+6. [x] Containerize services and provide a local Docker Compose deployment.
+7. Deploy the services to a local Kubernetes cluster.
+8. Add observability, load tests, and documented benchmark results.

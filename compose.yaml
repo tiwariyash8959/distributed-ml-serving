@@ -1,9 +1,17 @@
 x-worker: &worker
   build: .
   image: distributed-ml-serving:local
-  command: ["serve", "--address", "0.0.0.0:50051"]
+  command:
+    - serve
+    - --address
+    - 0.0.0.0:50051
+    - --metrics-address
+    - 0.0.0.0
+    - --metrics-port
+    - "8000"
   expose:
     - "50051"
+    - "8000"
   healthcheck:
     test: ["CMD", "ml-serving", "health", "--address", "127.0.0.1:50051"]
     interval: 10s
@@ -28,8 +36,14 @@ services:
       - 0.0.0.0:50052
       - --workers
       - worker-a:50051,worker-b:50051
+      - --metrics-address
+      - 0.0.0.0
+      - --metrics-port
+      - "8000"
     ports:
       - "50052:50052"
+    expose:
+      - "8000"
     depends_on:
       worker-a:
         condition: service_healthy
@@ -41,4 +55,19 @@ services:
       timeout: 3s
       retries: 3
       start_period: 5s
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - coordinator
+      - worker-a
+      - worker-b
     restart: unless-stopped

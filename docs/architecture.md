@@ -18,7 +18,7 @@
 
 ## First milestone: implemented locally
 
-The worker loads a validated, versioned linear model from a JSON artifact. The default artifact ships with the Python package; operators can select another compatible artifact at startup. A Docker Compose setup runs two workers behind the coordinator for local development. Artifacts and metadata are not yet stored in object storage or a database, and Kubernetes deployment remains future work.
+The worker loads a validated, versioned linear model from a JSON artifact. The default artifact ships with the Python package; operators can select another compatible artifact at startup. A Docker Compose setup runs two workers behind the coordinator and Prometheus scrapes RPC request counts and latency histograms from all three services. Artifacts and metadata are not yet stored in object storage or a database, and Kubernetes deployment remains future work.
 
 ## Coordinator behavior
 

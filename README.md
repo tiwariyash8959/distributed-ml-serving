@@ -98,6 +98,23 @@ Docker Compose builds one application image and runs two workers behind a coordi
 docker compose up --build -d
 docker compose exec coordinator ml-serving health --address 127.0.0.1:50052
 docker compose exec coordinator ml-serving predict --address 127.0.0.1:50052 --features 0.8,0.2
+```
+
+Prometheus scrapes the coordinator and both workers. Open `http://localhost:9090` to query metrics. For example, request rate by service:
+
+```promql
+sum by (service) (rate(ml_serving_rpc_requests_total{method="Predict",status="OK"}[5m]))
+```
+
+The 95th percentile prediction latency can be queried from the histogram:
+
+```promql
+histogram_quantile(0.95, sum by (le, service) (rate(ml_serving_rpc_duration_seconds_bucket{method="Predict"}[5m])))
+```
+
+Continue with the logs and stop the stack when finished:
+
+```powershell
 docker compose logs -f coordinator worker-a worker-b
 docker compose down
 ```
@@ -113,4 +130,5 @@ This Compose setup is for local development. Kubernetes deployment, external art
 5. Add object artifact storage and model metadata persistence.
 6. [x] Containerize services and provide a local Docker Compose deployment.
 7. Deploy the services to a local Kubernetes cluster.
-8. Add observability, load tests, and documented benchmark results.
+8. [x] Expose Prometheus RPC request counts and latency histograms from the local Compose stack.
+9. Add load tests and documented benchmark results.

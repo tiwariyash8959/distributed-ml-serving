@@ -26,6 +26,8 @@ def main() -> None:
         "--model-artifact",
         help="path to a versioned JSON model artifact (defaults to the packaged baseline)",
     )
+    serve_parser.add_argument("--metrics-address", default="127.0.0.1")
+    serve_parser.add_argument("--metrics-port", type=int)
 
     coordinator_parser = commands.add_parser(
         "coordinator", help="start a load-aware coordinator in front of workers"
@@ -38,6 +40,8 @@ def main() -> None:
         help="comma-separated worker addresses, for example 127.0.0.1:50051,127.0.0.1:50053",
     )
     coordinator_parser.add_argument("--request-timeout", type=float, default=1.0)
+    coordinator_parser.add_argument("--metrics-address", default="127.0.0.1")
+    coordinator_parser.add_argument("--metrics-port", type=int)
 
     predict_parser = commands.add_parser("predict", help="send one prediction to a worker")
     predict_parser.add_argument("--address", default="127.0.0.1:50051")
@@ -49,9 +53,20 @@ def main() -> None:
 
     arguments = parser.parse_args()
     if arguments.command == "serve":
-        serve(arguments.address, arguments.model_artifact)
+        serve(
+            arguments.address,
+            arguments.model_artifact,
+            arguments.metrics_address,
+            arguments.metrics_port,
+        )
     elif arguments.command == "coordinator":
-        serve_coordinator(arguments.workers, arguments.address, arguments.request_timeout)
+        serve_coordinator(
+            arguments.workers,
+            arguments.address,
+            arguments.request_timeout,
+            arguments.metrics_address,
+            arguments.metrics_port,
+        )
     elif arguments.command == "predict":
         response = predict(arguments.address, arguments.features, arguments.request_id)
         print(f"request_id: {response.request_id}")

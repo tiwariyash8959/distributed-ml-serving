@@ -15,6 +15,7 @@ from ml_serving.model import (
     default_model_artifact_path,
     load_model_artifact,
 )
+from ml_serving.metrics import start_metrics_server, stop_metrics_server, track_rpc
 from ml_serving.observability import configure_logging
 from ml_serving.v1 import prediction_pb2, prediction_pb2_grpc
 
@@ -27,6 +28,7 @@ class PredictionWorker(prediction_pb2_grpc.PredictionServiceServicer):
     def __init__(self, model: ModelArtifact = DEFAULT_MODEL) -> None:
         self._model = model
 
+    @track_rpc("worker", "Predict")
     def Predict(self, request, context):
         if not request.request_id:
             logger.warning("prediction_rejected", extra={"event_fields": {"reason": "missing_request_id"}})
@@ -77,6 +79,7 @@ class PredictionWorker(prediction_pb2_grpc.PredictionServiceServicer):
             predicted_label=label,
         )
 
+    @track_rpc("worker", "GetHealth")
     def GetHealth(self, request, context):
         return prediction_pb2.HealthResponse(ready=True, model_version=self._model.model_version)
 
@@ -105,23 +108,31 @@ def _create_server(bind_address: str, max_workers: int, model: ModelArtifact) ->
 def serve(
     bind_address: str = "127.0.0.1:50051",
     model_artifact_path: str | None = None,
+    metrics_address: str = "127.0.0.1",
+    metrics_port: int | None = None,
 ) -> None:
     configure_logging()
     artifact_path = model_artifact_path or str(default_model_artifact_path())
     model = load_model_artifact(artifact_path)
     server = _create_server(bind_address, 8, model)
-    server.start()
-    logger.info(
-        "worker_started",
-        extra={
-            "event_fields": {
-                "address": bind_address,
-                "model_version": model.model_version,
-                "model_artifact": artifact_path,
-            }
-        },
-    )
+    metrics_state = start_metrics_server(metrics_address, metrics_port)
     try:
+        server.start()
+        logger.info(
+            "worker_started",
+            extra={
+                "event_fields": {
+                    "address": bind_address,
+                    "model_version": model.model_version,
+                    "model_artifact": artifact_path,
+                    "metrics_address": (
+                        f"{metrics_address}:{metrics_port}" if metrics_port is not None else None
+                    ),
+                }
+            },
+        )
         server.wait_for_termination()
     except KeyboardInterrupt:
         server.stop(grace=3).wait()
+    finally:
+        stop_metrics_server(metrics_state)

@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 import grpc
 
+from ml_serving.metrics import start_metrics_server, stop_metrics_server, track_rpc
 from ml_serving.observability import configure_logging
 from ml_serving.v1 import prediction_pb2, prediction_pb2_grpc
 
@@ -88,6 +89,7 @@ class PredictionCoordinator(prediction_pb2_grpc.PredictionServiceServicer):
             remaining = min(remaining, client_remaining)
         return remaining
 
+    @track_rpc("coordinator", "Predict")
     def Predict(self, request, context):
         request_id = request.request_id
         if not request_id:
@@ -177,6 +179,7 @@ class PredictionCoordinator(prediction_pb2_grpc.PredictionServiceServicer):
         detail = last_error.details() if last_error is not None else "no workers available"
         context.abort(grpc.StatusCode.UNAVAILABLE, f"all workers failed: {detail}")
 
+    @track_rpc("coordinator", "GetHealth")
     def GetHealth(self, request, context):
         started = time.monotonic()
         probe_id = str(uuid.uuid4())
@@ -259,24 +262,31 @@ def serve(
     worker_addresses: list[str],
     bind_address: str = "127.0.0.1:50052",
     request_timeout: float = 1.0,
+    metrics_address: str = "127.0.0.1",
+    metrics_port: int | None = None,
 ) -> None:
     configure_logging()
     server, coordinator = create_server(worker_addresses, bind_address, request_timeout)
-    server.start()
-    logger.info(
-        "coordinator_started",
-        extra={
-            "event_fields": {
-                "address": bind_address,
-                "workers": worker_addresses,
-                "timeout_ms": round(request_timeout * 1000, 2),
-                "routing_policy": "least_predicted_completion_time",
-            }
-        },
-    )
+    metrics_state = start_metrics_server(metrics_address, metrics_port)
     try:
+        server.start()
+        logger.info(
+            "coordinator_started",
+            extra={
+                "event_fields": {
+                    "address": bind_address,
+                    "workers": worker_addresses,
+                    "timeout_ms": round(request_timeout * 1000, 2),
+                    "routing_policy": "least_predicted_completion_time",
+                    "metrics_address": (
+                        f"{metrics_address}:{metrics_port}" if metrics_port is not None else None
+                    ),
+                }
+            },
+        )
         server.wait_for_termination()
     except KeyboardInterrupt:
         server.stop(grace=3).wait()
     finally:
         coordinator.close()
+        stop_metrics_server(metrics_state)
